@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.NotificationsActive
@@ -59,6 +60,7 @@ fun JobHeader(
     isRefreshing: Boolean,
     onRefreshClick: () -> Unit,
     onBookmarkClick: () -> Unit,
+    onNetlifyClick: () -> Unit,
     onInfoClick: (InfoDialogType) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -146,6 +148,19 @@ fun JobHeader(
                 // Actions: Saved Jobs, Sync Refresh, More Menu
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(
+                        onClick = onNetlifyClick,
+                        modifier = Modifier
+                            .size(40.dp)
+                            .testTag("header_netlify_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CloudSync,
+                            contentDescription = "Netlify API Sync",
+                            tint = Color(0xFF80DEEA)
+                        )
+                    }
+
+                    IconButton(
                         onClick = onBookmarkClick,
                         modifier = Modifier
                             .size(40.dp)
@@ -203,6 +218,13 @@ fun JobHeader(
                             expanded = menuExpanded,
                             onDismissRequest = { menuExpanded = false }
                         ) {
+                            DropdownMenuItem(
+                                text = { Text("⚡ Netlify API Settings (नेटलिफ़ी API)") },
+                                onClick = {
+                                    menuExpanded = false
+                                    onNetlifyClick()
+                                }
+                            )
                             DropdownMenuItem(
                                 text = { Text("About Us (हमारे बारे में)") },
                                 onClick = {

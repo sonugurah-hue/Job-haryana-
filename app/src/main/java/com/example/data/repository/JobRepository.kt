@@ -5,6 +5,9 @@ import com.example.data.local.AppDatabase
 import com.example.data.local.JobDao
 import com.example.data.model.JobItem
 import com.example.data.model.NavCategory
+import com.example.data.network.NetlifyApiManager
+import com.example.data.network.NetlifyConfigManager
+import com.example.data.network.NetlifySyncResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
@@ -12,6 +15,8 @@ import kotlinx.coroutines.withContext
 class JobRepository(context: Context) {
     private val db = AppDatabase.getDatabase(context)
     private val dao: JobDao = db.jobDao()
+    val netlifyConfig = NetlifyConfigManager(context)
+    private val netlifyApiManager = NetlifyApiManager()
 
     val allJobs: Flow<List<JobItem>> = dao.getAllJobsFlow()
     val featuredJobs: Flow<List<JobItem>> = dao.getFeaturedJobsFlow()
@@ -31,7 +36,6 @@ class JobRepository(context: Context) {
 
     /**
      * Initializes pre-seeded data if local database is empty.
-     * Ready for automatic sync from remote job-update APIs/scrapers.
      */
     suspend fun checkAndSeedInitialData() {
         withContext(Dispatchers.IO) {
@@ -43,19 +47,41 @@ class JobRepository(context: Context) {
     }
 
     /**
-     * Simulated or actual network job-update sync.
-     * When remote API/webhook is configured, this fetches the latest entries
-     * and upserts into Room database.
+     * Fetches live jobs from the user-configured Netlify API,
+     * parses the JSON payload and upserts items directly into Room database.
+     */
+    suspend fun syncFromNetlifyApi(customUrl: String? = null): NetlifySyncResult {
+        return withContext(Dispatchers.IO) {
+            val targetUrl = customUrl ?: netlifyConfig.netlifyApiUrl
+            val result = netlifyApiManager.fetchJobsFromNetlify(targetUrl)
+
+            when (result) {
+                is NetlifySyncResult.Success -> {
+                    if (result.jobs.isNotEmpty()) {
+                        dao.insertJobs(result.jobs)
+                    }
+                    netlifyConfig.lastSyncTimestamp = System.currentTimeMillis()
+                    netlifyConfig.lastSyncCount = result.jobs.size
+                    netlifyConfig.lastSyncStatus = "Success (${result.jobs.size} jobs synced)"
+                }
+                is NetlifySyncResult.Failure -> {
+                    netlifyConfig.lastSyncStatus = "Failed: ${result.errorMessage.take(80)}"
+                }
+            }
+
+            result
+        }
+    }
+
+    /**
+     * General sync updates wrapper.
      */
     suspend fun syncLatestUpdates(): Int {
         return withContext(Dispatchers.IO) {
-            // Future automated sync endpoint integration point
-            // For now, refresh timestamp and guarantee all active listings are populated
-            val currentCount = dao.getJobCount()
-            if (currentCount == 0) {
+            val count = dao.getJobCount()
+            if (count == 0) {
                 dao.insertJobs(getInitialSeedData())
             }
-            // Return number of available items
             dao.getJobCount()
         }
     }

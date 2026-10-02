@@ -45,6 +45,22 @@ class JobHaryanaViewModel(application: Application) : AndroidViewModel(applicati
     private val _statusMessage = MutableStateFlow<String?>(null)
     val statusMessage: StateFlow<String?> = _statusMessage.asStateFlow()
 
+    // Netlify API Configuration & Sync State
+    private val _showNetlifyDialog = MutableStateFlow(false)
+    val showNetlifyDialog: StateFlow<Boolean> = _showNetlifyDialog.asStateFlow()
+
+    private val _netlifyUrl = MutableStateFlow(repository.netlifyConfig.netlifyApiUrl)
+    val netlifyUrl: StateFlow<String> = _netlifyUrl.asStateFlow()
+
+    private val _netlifySyncStatus = MutableStateFlow(repository.netlifyConfig.lastSyncStatus)
+    val netlifySyncStatus: StateFlow<String> = _netlifySyncStatus.asStateFlow()
+
+    private val _netlifyLastSyncTime = MutableStateFlow(repository.netlifyConfig.lastSyncTimestamp)
+    val netlifyLastSyncTime: StateFlow<Long> = _netlifyLastSyncTime.asStateFlow()
+
+    private val _isNetlifySyncing = MutableStateFlow(false)
+    val isNetlifySyncing: StateFlow<Boolean> = _isNetlifySyncing.asStateFlow()
+
     val allJobs: StateFlow<List<JobItem>> = repository.allJobs
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -155,6 +171,50 @@ class JobHaryanaViewModel(application: Application) : AndroidViewModel(applicati
 
     fun closeInfoDialog() {
         _activeInfoDialog.value = null
+    }
+
+    // --- Netlify API Methods ---
+    fun openNetlifySettings() {
+        _showNetlifyDialog.value = true
+        _netlifyUrl.value = repository.netlifyConfig.netlifyApiUrl
+        _netlifySyncStatus.value = repository.netlifyConfig.lastSyncStatus
+        _netlifyLastSyncTime.value = repository.netlifyConfig.lastSyncTimestamp
+    }
+
+    fun closeNetlifySettings() {
+        _showNetlifyDialog.value = false
+    }
+
+    fun updateNetlifyUrl(newUrl: String) {
+        _netlifyUrl.value = newUrl
+        repository.netlifyConfig.netlifyApiUrl = newUrl
+    }
+
+    fun resetNetlifyUrl() {
+        repository.netlifyConfig.resetToDefault()
+        _netlifyUrl.value = repository.netlifyConfig.netlifyApiUrl
+        _statusMessage.value = "Netlify API URL reset to default"
+    }
+
+    fun syncFromNetlify(customUrl: String? = null) {
+        viewModelScope.launch {
+            _isNetlifySyncing.value = true
+            val urlToUse = customUrl ?: _netlifyUrl.value
+            val result = repository.syncFromNetlifyApi(urlToUse)
+            _isNetlifySyncing.value = false
+
+            _netlifySyncStatus.value = repository.netlifyConfig.lastSyncStatus
+            _netlifyLastSyncTime.value = repository.netlifyConfig.lastSyncTimestamp
+
+            when (result) {
+                is com.example.data.network.NetlifySyncResult.Success -> {
+                    _statusMessage.value = "✅ Netlify API: ${result.count} jobs synced successfully!"
+                }
+                is com.example.data.network.NetlifySyncResult.Failure -> {
+                    _statusMessage.value = "❌ Netlify API Sync Error: ${result.errorMessage}"
+                }
+            }
+        }
     }
 
     fun clearStatusMessage() {

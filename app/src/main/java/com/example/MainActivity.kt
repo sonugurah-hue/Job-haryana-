@@ -30,6 +30,7 @@ import com.example.ui.components.JobDetailScreen
 import com.example.ui.components.JobHeader
 import com.example.ui.components.JobNavigationMenu
 import com.example.ui.components.JobSearchBar
+import com.example.ui.components.NetlifyApiDialog
 import com.example.ui.screens.CategoryListScreen
 import com.example.ui.screens.HomeScreenContent
 import com.example.ui.theme.JobHaryanaTheme
@@ -59,6 +60,12 @@ fun JobHaryanaApp(
     val activeInfoDialog by viewModel.activeInfoDialog.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val statusMessage by viewModel.statusMessage.collectAsStateWithLifecycle()
+
+    val showNetlifyDialog by viewModel.showNetlifyDialog.collectAsStateWithLifecycle()
+    val netlifyUrl by viewModel.netlifyUrl.collectAsStateWithLifecycle()
+    val netlifySyncStatus by viewModel.netlifySyncStatus.collectAsStateWithLifecycle()
+    val netlifyLastSyncTime by viewModel.netlifyLastSyncTime.collectAsStateWithLifecycle()
+    val isNetlifySyncing by viewModel.isNetlifySyncing.collectAsStateWithLifecycle()
 
     val allJobs by viewModel.allJobs.collectAsStateWithLifecycle()
     val currentDisplayJobs by viewModel.currentDisplayJobs.collectAsStateWithLifecycle()
@@ -112,6 +119,7 @@ fun JobHaryanaApp(
                         isRefreshing = isRefreshing,
                         onRefreshClick = { viewModel.refreshJobUpdates() },
                         onBookmarkClick = { viewModel.selectTab(NavCategory.BOOKMARKS) },
+                        onNetlifyClick = { viewModel.openNetlifySettings() },
                         onInfoClick = { viewModel.openInfoDialog(it) }
                     )
 
@@ -174,6 +182,20 @@ fun JobHaryanaApp(
                 InfoDialog(
                     type = dialogType,
                     onDismiss = { viewModel.closeInfoDialog() }
+                )
+            }
+
+            // Netlify API Configuration Dialog
+            if (showNetlifyDialog) {
+                NetlifyApiDialog(
+                    currentUrl = netlifyUrl,
+                    syncStatus = netlifySyncStatus,
+                    lastSyncTime = netlifyLastSyncTime,
+                    isSyncing = isNetlifySyncing,
+                    onUrlSave = { viewModel.updateNetlifyUrl(it) },
+                    onResetDefault = { viewModel.resetNetlifyUrl() },
+                    onSyncNow = { viewModel.syncFromNetlify(it) },
+                    onDismiss = { viewModel.closeNetlifySettings() }
                 )
             }
         }
