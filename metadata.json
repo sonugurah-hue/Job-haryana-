@@ -1,0 +1,6 @@
+{
+  "name": "Job Haryana",
+  "description": "Haryana & Central Govt Jobs, Admit Cards, Results, and Admissions portal with Hindi and English job alerts.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
